@@ -1,0 +1,12 @@
+Slow:
+
+    HashCalculator ElapsedMilliseconds: 23403
+    Copy ElapsedMilliseconds: 57112
+
+Fast
+
+    HashCalculator ElapsedMilliseconds: 5089
+    Copy ElapsedMilliseconds: 16955
+
+4.6 razy szybciej hashowanie
+3.4 razy szybciej kopiowanie

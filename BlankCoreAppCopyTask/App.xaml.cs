@@ -18,7 +18,7 @@ namespace BlankCoreAppCopyTask
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
             containerRegistry.Register<IHashCalculator, HashService>();
-            containerRegistry.Register<ISynchronizationPlaylist, SynchronizationPlaylist>();
+            containerRegistry.Register<ISynchronizationPlaylist, SynchronizationPlaylistSlow>();
         }
     }
 }

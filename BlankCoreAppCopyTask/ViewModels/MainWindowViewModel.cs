@@ -73,10 +73,18 @@ namespace BlankCoreAppCopyTask.ViewModels
 
             CanCopy = false;
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
             var filesToCopy = await _synchronizationPlaylist.CreateListOfFilesToCopy(@"c:\temp\src", @"c:\temp\dst");
+            stopwatch.Stop();
+            Debug.WriteLine($"Hash ElapsedMilliseconds: {stopwatch.ElapsedMilliseconds}");
+
             SumOfAllFileSize = _synchronizationPlaylist.GetSumOfAllFileSize(filesToCopy);
             Debug.WriteLine($"SumOfAllFileSize: {SumOfAllFileSize}");
+
+            Stopwatch stopwatchCopy = Stopwatch.StartNew();
             await _synchronizationPlaylist.Copy(filesToCopy, progress);
+            stopwatchCopy.Stop();
+            Debug.WriteLine($"Copy ElapsedMilliseconds: {stopwatchCopy.ElapsedMilliseconds}");
 
             CanCopy = true;
         }
