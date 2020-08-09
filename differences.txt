@@ -8,5 +8,5 @@ Fast
     HashCalculator ElapsedMilliseconds: 5089
     Copy ElapsedMilliseconds: 16955
 
-4.6 razy szybciej hashowanie
-3.4 razy szybciej kopiowanie
+4.6 razy szybciej hashowanie = wzrost wydajności o 78 %
+3.4 razy szybciej kopiowanie = wzrost wydajności o 70 %
