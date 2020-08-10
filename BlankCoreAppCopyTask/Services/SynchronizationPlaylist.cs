@@ -39,9 +39,7 @@ namespace BlankCoreAppCopyTask.Services
                 {
                     Task.Factory.StartNew(async () =>
                     {
-                        Debug.WriteLine($"Start ManagedThreadId: {Thread.CurrentThread.ManagedThreadId}");
                         await Copy(file, action);
-                        Debug.WriteLine($"End ManagedThreadId: {Thread.CurrentThread.ManagedThreadId}");
                     }, TaskCreationOptions.AttachedToParent).Unwrap();
                 }
             });
@@ -73,7 +71,7 @@ namespace BlankCoreAppCopyTask.Services
                     {
                         var fi = new FileInfo(file);
                         var hash = _hashCalculator.CalculateHash(file, MD5.Create());
-                        Debug.WriteLine($"{Thread.CurrentThread.Name}\nfile: {file}: hash: {hash}");
+                        Debug.WriteLine($"{Thread.CurrentThread.ManagedThreadId}\nfile: {file}: hash: {hash}");
                         var destination = Path.Combine(dst, $"{hash}{fi.Extension}");
                         var isAlreadyAdded = filesToCopy.Any(fileToCopy => fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
                         if (!File.Exists(destination) && !isAlreadyAdded)

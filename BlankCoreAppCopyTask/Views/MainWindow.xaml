@@ -10,6 +10,10 @@
     <Grid>
         <!-- <ContentControl prism:RegionManager.RegionName="ContentRegion" /> -->
         <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding SelectSrcFolderCommand}" Content="Select src folder" Margin="5"/>
+                <Button Command="{Binding SelectDstFolderCommand}" Content="Select dst folder" Margin="5" />
+            </StackPanel>
             <Button Content="Clear dest folder" 
                     IsEnabled="{Binding CanCopy}" 
                     Command="{Binding ClearCommand}" 

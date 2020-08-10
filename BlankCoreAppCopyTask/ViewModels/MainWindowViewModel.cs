@@ -4,7 +4,6 @@ using Prism.Mvvm;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Unity;
@@ -15,12 +14,14 @@ namespace BlankCoreAppCopyTask.ViewModels
     {
         private readonly ISynchronizationPlaylist _synchronizationPlaylistFast;
         private readonly ISynchronizationPlaylist _synchronizationPlaylistSlow;
-        private string _title = "Prism Application";
+        private string _title = "Comparison of copy method";
         private long _sumOfAllFileSize;
         private double _progressValue;
         private bool _canCopy = true;
         private ISynchronizationPlaylist _synchronizationPlaylist;
         private string _logMessage;
+        private string sourceFolder = @"c:\temp\src";
+        private string destinationFolder = @"c:\temp\dst";
 
         public string Title
         {
@@ -46,6 +47,8 @@ namespace BlankCoreAppCopyTask.ViewModels
             set => SetProperty(ref _logMessage, value);
         }
 
+        public DelegateCommand SelectSrcFolderCommand { get; }
+        public DelegateCommand SelectDstFolderCommand { get; }
         public DelegateCommand ClearCommand { get; }
         public DelegateCommand<string> ChangeMethodCommand { get; }
         public DelegateCommand CopyCommand { get; }
@@ -57,9 +60,23 @@ namespace BlankCoreAppCopyTask.ViewModels
             _synchronizationPlaylistFast = synchronizationPlaylistFast;
             _synchronizationPlaylistSlow = synchronizationPlaylistSlow;
             _synchronizationPlaylist = _synchronizationPlaylistSlow;
+            SelectSrcFolderCommand = new DelegateCommand(SelectSrcFolderAction);
+            SelectDstFolderCommand = new DelegateCommand(SelectDstFolderAction);
             ClearCommand = new DelegateCommand(ClearExecuteAction);
             ChangeMethodCommand = new DelegateCommand<string>(ChangeMethodExecuteAction);
             CopyCommand = new DelegateCommand(CopyExecuteAction, CanCopyExecute);
+        }
+
+        private void SelectSrcFolderAction()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+
+        }
+
+        private void SelectDstFolderAction()
+        {
+            throw new NotImplementedException();
         }
 
         private void ChangeMethodExecuteAction(string method)
@@ -86,7 +103,7 @@ namespace BlankCoreAppCopyTask.ViewModels
 
         private void ClearExecuteAction()
         {
-            RemoveAllFilesFrom(@"c:\temp\dst");
+            RemoveAllFilesFrom(destinationFolder);
         }
 
         private void RemoveAllFilesFrom(string path)
@@ -134,7 +151,7 @@ namespace BlankCoreAppCopyTask.ViewModels
             }
 
             var stopwatch = Stopwatch.StartNew();
-            var filesToCopy = await _synchronizationPlaylist.CreateListOfFilesToCopy(@"h:\temp\src", @"c:\temp\dst");
+            var filesToCopy = await _synchronizationPlaylist.CreateListOfFilesToCopy(sourceFolder, destinationFolder);
             stopwatch.Stop();
             var elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
             Debug.WriteLine($"Hash ElapsedMilliseconds: {elapsedMilliseconds}");
