@@ -23,21 +23,21 @@
             <RadioButton 
                 GroupName="ready" 
                 IsChecked="True"
-                Name="Slow"
+                Name="OneThread"
                 Command="{Binding ChangeMethodCommand}"
-                CommandParameter="{Binding ElementName=Slow, Path=Content}"
+                CommandParameter="{Binding ElementName=OneThread, Path=Content}"
                 IsEnabled="{Binding CanCopy}" 
                 Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}">
-                Slow
+                OneThread
             </RadioButton>
             <RadioButton 
                 GroupName="ready"
-                Name="Fast"
+                Name="MultiThread"
                 Command="{Binding ChangeMethodCommand}"
-                CommandParameter="{Binding ElementName=Fast, Path=Content}"
+                CommandParameter="{Binding ElementName=MultiThread, Path=Content}"
                 IsEnabled="{Binding CanCopy}" 
                 Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}">
-                Fast
+                MultiThread
             </RadioButton>
 
             <Button Content="Copy" 

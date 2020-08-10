@@ -11,11 +11,11 @@ using System.Windows.Threading;
 
 namespace BlankCoreAppCopyTask.Services
 {
-    public class SynchronizationPlaylistSlow : ISynchronizationPlaylist
+    public class SynchronizationMultiThread : ISynchronization
     {
         private readonly IHashCalculator _hashCalculator;
 
-        public SynchronizationPlaylistSlow(IHashCalculator hashCalculator)
+        public SynchronizationMultiThread(IHashCalculator hashCalculator)
         {
             _hashCalculator = hashCalculator;
         }
@@ -33,13 +33,14 @@ namespace BlankCoreAppCopyTask.Services
                     updater?.Invoke((double)copyProgressInfo / sum);
                 });
             });
-            var copyOperation = Task.Run(async () =>
+            var copyOperation = Task.Factory.StartNew(() =>
             {
                 foreach (var file in files)
-                { 
-                    Debug.WriteLine($"Start ManagedThreadId: {Thread.CurrentThread.ManagedThreadId}");
-                    await Copy(file, action);
-                    Debug.WriteLine($"End ManagedThreadId: {Thread.CurrentThread.ManagedThreadId}");
+                {
+                    Task.Factory.StartNew(async () =>
+                    {
+                        await Copy(file, action);
+                    }, TaskCreationOptions.AttachedToParent).Unwrap();
                 }
             });
 
@@ -62,20 +63,23 @@ namespace BlankCoreAppCopyTask.Services
 
             Directory.CreateDirectory(dst);
 
-            await Task.Run(() =>
+            await Task.Factory.StartNew(() =>
             {
                 foreach (var file in Directory.GetFiles(src))
                 {
-                    var fi = new FileInfo(file);
-                    var hash = _hashCalculator.CalculateHash(file, MD5.Create());
-                    Debug.WriteLine($"{Thread.CurrentThread.Name}\nfile: {file}: hash: {hash}");
-                    var destination = Path.Combine(dst, $"{hash}{fi.Extension}");
-                    var isAlreadyAdded = filesToCopy.Any(fileToCopy => fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
-                    if (!File.Exists(destination) && !isAlreadyAdded)
+                    Task.Factory.StartNew(() =>
                     {
-                        var fileToCopy = new FileToCopy(hash, file, fi.Length, destination);
-                        filesToCopy.Add(fileToCopy);
-                    }
+                        var fi = new FileInfo(file);
+                        var hash = _hashCalculator.CalculateHash(file, MD5.Create());
+                        Debug.WriteLine($"{Thread.CurrentThread.ManagedThreadId}\nfile: {file}: hash: {hash}");
+                        var destination = Path.Combine(dst, $"{hash}{fi.Extension}");
+                        var isAlreadyAdded = filesToCopy.Any(fileToCopy => fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
+                        if (!File.Exists(destination) && !isAlreadyAdded)
+                        {
+                            var fileToCopy = new FileToCopy(hash, file, fi.Length, destination);
+                            filesToCopy.Add(fileToCopy);
+                        }
+                    }, TaskCreationOptions.AttachedToParent);
                 }
             });
 

@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Windows.Threading;
 using Unity;
 
@@ -12,13 +13,13 @@ namespace BlankCoreAppCopyTask.ViewModels
 {
     public class MainWindowViewModel : BindableBase
     {
-        private readonly ISynchronizationPlaylist _synchronizationPlaylistFast;
-        private readonly ISynchronizationPlaylist _synchronizationPlaylistSlow;
+        private readonly ISynchronization _synchronizationMultiThread;
+        private readonly ISynchronization _synchronizationOneThread;
         private string _title = "Comparison of copy method";
         private long _sumOfAllFileSize;
         private double _progressValue;
         private bool _canCopy = true;
-        private ISynchronizationPlaylist _synchronizationPlaylist;
+        private ISynchronization _synchronization;
         private string _logMessage;
         private string sourceFolder = @"c:\temp\src";
         private string destinationFolder = @"c:\temp\dst";
@@ -54,12 +55,12 @@ namespace BlankCoreAppCopyTask.ViewModels
         public DelegateCommand CopyCommand { get; }
 
         public MainWindowViewModel(
-            [Dependency("VerFast")] ISynchronizationPlaylist synchronizationPlaylistFast,
-            [Dependency("VerSlow")] ISynchronizationPlaylist synchronizationPlaylistSlow)
+            [Dependency("VerMultiThread")] ISynchronization synchronizationMultiThread,
+            [Dependency("VerOneThread")] ISynchronization synchronizationOneThread)
         {
-            _synchronizationPlaylistFast = synchronizationPlaylistFast;
-            _synchronizationPlaylistSlow = synchronizationPlaylistSlow;
-            _synchronizationPlaylist = _synchronizationPlaylistSlow;
+            _synchronizationMultiThread = synchronizationMultiThread;
+            _synchronizationOneThread = synchronizationOneThread;
+            _synchronization = _synchronizationOneThread;
             SelectSrcFolderCommand = new DelegateCommand(SelectSrcFolderAction);
             SelectDstFolderCommand = new DelegateCommand(SelectDstFolderAction);
             ClearCommand = new DelegateCommand(ClearExecuteAction);
@@ -69,24 +70,36 @@ namespace BlankCoreAppCopyTask.ViewModels
 
         private void SelectSrcFolderAction()
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
-
+            var dialog = new FolderBrowserDialog();
+            var result = dialog.ShowDialog();
+            if (result == DialogResult.OK) 
+            {
+                var dictianary = dialog.SelectedPath;
+                Debug.WriteLine($"result sourceFolder: {dictianary}");
+                sourceFolder = dictianary;
+            }
         }
 
         private void SelectDstFolderAction()
         {
-            throw new NotImplementedException();
+            var dialog = new FolderBrowserDialog();
+            var result = dialog.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                var dictianary = dialog.SelectedPath;
+                Debug.WriteLine($"result destinationFolder: {dictianary}");
+                destinationFolder = dictianary;
+            }
         }
 
         private void ChangeMethodExecuteAction(string method)
         {
             Debug.WriteLine($"method: {method}");
-            _synchronizationPlaylist = method switch
+            _synchronization = method switch
             {
-                "Fast" => _synchronizationPlaylistFast,
-                "Slow" => _synchronizationPlaylistSlow,
-                _ => _synchronizationPlaylist
+                "MultiThread" => _synchronizationMultiThread,
+                "OneThread" => _synchronizationOneThread,
+                _ => _synchronization
             };
         }
 
@@ -140,28 +153,28 @@ namespace BlankCoreAppCopyTask.ViewModels
             ProgressValue = 0;
             CanCopy = false;
 
-            if (_synchronizationPlaylist == _synchronizationPlaylistSlow)
+            if (_synchronization == _synchronizationOneThread)
             {
-                Debug.WriteLine("synchronization Slow");
+                Debug.WriteLine("synchronization OneThread");
             }
 
-            if (_synchronizationPlaylist == _synchronizationPlaylistFast)
+            if (_synchronization == _synchronizationMultiThread)
             {
-                Debug.WriteLine("synchronization Fast");
+                Debug.WriteLine("synchronization MultiThread");
             }
 
             var stopwatch = Stopwatch.StartNew();
-            var filesToCopy = await _synchronizationPlaylist.CreateListOfFilesToCopy(sourceFolder, destinationFolder);
+            var filesToCopy = await _synchronization.CreateListOfFilesToCopy(sourceFolder, destinationFolder);
             stopwatch.Stop();
             var elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
             Debug.WriteLine($"Hash ElapsedMilliseconds: {elapsedMilliseconds}");
             LogMessage += Environment.NewLine + $"Hash ElapsedMilliseconds: {elapsedMilliseconds}";
 
-            SumOfAllFileSize = _synchronizationPlaylist.GetSumOfAllFileSize(filesToCopy);
+            SumOfAllFileSize = _synchronization.GetSumOfAllFileSize(filesToCopy);
             Debug.WriteLine($"SumOfAllFileSize: {SumOfAllFileSize}");
 
             var stopwatchCopy = Stopwatch.StartNew();
-            await _synchronizationPlaylist.Copy(filesToCopy, progress);
+            await _synchronization.Copy(filesToCopy, progress);
             stopwatchCopy.Stop();
             var copyElapsedMilliseconds = stopwatchCopy.ElapsedMilliseconds;
             Debug.WriteLine($"Copy ElapsedMilliseconds: {copyElapsedMilliseconds}");

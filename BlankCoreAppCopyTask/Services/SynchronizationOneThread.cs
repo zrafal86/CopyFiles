@@ -11,11 +11,11 @@ using System.Windows.Threading;
 
 namespace BlankCoreAppCopyTask.Services
 {
-    public class SynchronizationPlaylist : ISynchronizationPlaylist
+    public class SynchronizationOneThread : ISynchronization
     {
         private readonly IHashCalculator _hashCalculator;
 
-        public SynchronizationPlaylist(IHashCalculator hashCalculator)
+        public SynchronizationOneThread(IHashCalculator hashCalculator)
         {
             _hashCalculator = hashCalculator;
         }
@@ -33,14 +33,11 @@ namespace BlankCoreAppCopyTask.Services
                     updater?.Invoke((double)copyProgressInfo / sum);
                 });
             });
-            var copyOperation = Task.Factory.StartNew(() =>
+            var copyOperation = Task.Run(async () =>
             {
                 foreach (var file in files)
                 {
-                    Task.Factory.StartNew(async () =>
-                    {
-                        await Copy(file, action);
-                    }, TaskCreationOptions.AttachedToParent).Unwrap();
+                    await Copy(file, action);
                 }
             });
 
@@ -63,23 +60,20 @@ namespace BlankCoreAppCopyTask.Services
 
             Directory.CreateDirectory(dst);
 
-            await Task.Factory.StartNew(() =>
+            await Task.Run(() =>
             {
                 foreach (var file in Directory.GetFiles(src))
                 {
-                    Task.Factory.StartNew(() =>
+                    var fi = new FileInfo(file);
+                    var hash = _hashCalculator.CalculateHash(file, MD5.Create());
+                    Debug.WriteLine($"{Thread.CurrentThread.ManagedThreadId}\nfile: {file}: hash: {hash}");
+                    var destination = Path.Combine(dst, $"{hash}{fi.Extension}");
+                    var isAlreadyAdded = filesToCopy.Any(fileToCopy => fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
+                    if (!File.Exists(destination) && !isAlreadyAdded)
                     {
-                        var fi = new FileInfo(file);
-                        var hash = _hashCalculator.CalculateHash(file, MD5.Create());
-                        Debug.WriteLine($"{Thread.CurrentThread.ManagedThreadId}\nfile: {file}: hash: {hash}");
-                        var destination = Path.Combine(dst, $"{hash}{fi.Extension}");
-                        var isAlreadyAdded = filesToCopy.Any(fileToCopy => fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
-                        if (!File.Exists(destination) && !isAlreadyAdded)
-                        {
-                            var fileToCopy = new FileToCopy(hash, file, fi.Length, destination);
-                            filesToCopy.Add(fileToCopy);
-                        }
-                    }, TaskCreationOptions.AttachedToParent);
+                        var fileToCopy = new FileToCopy(hash, file, fi.Length, destination);
+                        filesToCopy.Add(fileToCopy);
+                    }
                 }
             });
 

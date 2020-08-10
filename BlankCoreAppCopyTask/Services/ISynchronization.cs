@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace BlankCoreAppCopyTask.Services
 {
-    public interface ISynchronizationPlaylist
+    public interface ISynchronization
     {
         Task Copy(ImmutableArray<IFileToCopy> files, Action<double> updater);
         Task<ImmutableArray<IFileToCopy>> CreateListOfFilesToCopy(string src, string dst);
