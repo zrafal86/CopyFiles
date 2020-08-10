@@ -8,11 +8,37 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
     <Grid>
-        <ContentControl prism:RegionManager.RegionName="ContentRegion" />
+        <!-- <ContentControl prism:RegionManager.RegionName="ContentRegion" /> -->
         <StackPanel Orientation="Vertical" VerticalAlignment="Center">
-            <Button Content="Copy" 
+            <Button Content="Clear dest folder" 
                     IsEnabled="{Binding CanCopy}" 
+                    Command="{Binding ClearCommand}" 
+                    Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    Margin="15"/>
+
+            <RadioButton 
+                GroupName="ready" 
+                IsChecked="True"
+                Name="Slow"
+                Command="{Binding ChangeMethodCommand}"
+                CommandParameter="{Binding ElementName=Slow, Path=Content}"
+                IsEnabled="{Binding CanCopy}" 
+                Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Slow
+            </RadioButton>
+            <RadioButton 
+                GroupName="ready"
+                Name="Fast"
+                Command="{Binding ChangeMethodCommand}"
+                CommandParameter="{Binding ElementName=Fast, Path=Content}"
+                IsEnabled="{Binding CanCopy}" 
+                Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Fast
+            </RadioButton>
+
+            <Button Content="Copy" 
                     Command="{Binding CopyCommand}" 
+                    IsEnabled="{Binding CanCopy}" 
                     Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}"
                     Margin="15"/>
             <ProgressBar 
@@ -24,6 +50,8 @@
                 IsIndeterminate="False"
                 Minimum="0"
                 Maximum="1"/>
+
+            <TextBlock Text="{Binding LogMessage}"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -3,18 +3,24 @@ using Prism.Commands;
 using Prism.Mvvm;
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Unity;
 
 namespace BlankCoreAppCopyTask.ViewModels
 {
     public class MainWindowViewModel : BindableBase
     {
-        private readonly ISynchronizationPlaylist _synchronizationPlaylist;
+        private readonly ISynchronizationPlaylist _synchronizationPlaylistFast;
+        private readonly ISynchronizationPlaylist _synchronizationPlaylistSlow;
         private string _title = "Prism Application";
         private long _sumOfAllFileSize;
         private double _progressValue;
         private bool _canCopy = true;
+        private ISynchronizationPlaylist _synchronizationPlaylist;
+        private string _logMessage;
 
         public string Title
         {
@@ -34,12 +40,37 @@ namespace BlankCoreAppCopyTask.ViewModels
             set => SetProperty(ref _progressValue, value);
         }
 
+        public string LogMessage
+        {
+            get => _logMessage;
+            set => SetProperty(ref _logMessage, value);
+        }
+
+        public DelegateCommand ClearCommand { get; }
+        public DelegateCommand<string> ChangeMethodCommand { get; }
         public DelegateCommand CopyCommand { get; }
 
-        public MainWindowViewModel(ISynchronizationPlaylist synchronizationPlaylist)
+        public MainWindowViewModel(
+            [Dependency("VerFast")] ISynchronizationPlaylist synchronizationPlaylistFast,
+            [Dependency("VerSlow")] ISynchronizationPlaylist synchronizationPlaylistSlow)
         {
-            _synchronizationPlaylist = synchronizationPlaylist;
+            _synchronizationPlaylistFast = synchronizationPlaylistFast;
+            _synchronizationPlaylistSlow = synchronizationPlaylistSlow;
+            _synchronizationPlaylist = _synchronizationPlaylistSlow;
+            ClearCommand = new DelegateCommand(ClearExecuteAction);
+            ChangeMethodCommand = new DelegateCommand<string>(ChangeMethodExecuteAction);
             CopyCommand = new DelegateCommand(CopyExecuteAction, CanCopyExecute);
+        }
+
+        private void ChangeMethodExecuteAction(string method)
+        {
+            Debug.WriteLine($"method: {method}");
+            _synchronizationPlaylist = method switch
+            {
+                "Fast" => _synchronizationPlaylistFast,
+                "Slow" => _synchronizationPlaylistSlow,
+                _ => _synchronizationPlaylist
+            };
         }
 
         private bool CanCopyExecute()
@@ -51,6 +82,25 @@ namespace BlankCoreAppCopyTask.ViewModels
         {
             get => _canCopy;
             set => SetProperty(ref _canCopy, value);
+        }
+
+        private void ClearExecuteAction()
+        {
+            RemoveAllFilesFrom(@"c:\temp\dst");
+        }
+
+        private void RemoveAllFilesFrom(string path)
+        {
+            var di = new DirectoryInfo(path);
+
+            foreach (var file in di.GetFiles())
+            {
+                file.Delete();
+            }
+            foreach (var dir in di.GetDirectories())
+            {
+                dir.Delete(true);
+            }
         }
 
         private void CopyExecuteAction()
@@ -70,23 +120,38 @@ namespace BlankCoreAppCopyTask.ViewModels
         private async Task CopyExecuteActionAsync(Action<double> progress)
         {
             // FileSystem.CopyDirectory(@"c:\temp\src", @"c:\temp\dst", UIOption.AllDialogs);
-
+            ProgressValue = 0;
             CanCopy = false;
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            var filesToCopy = await _synchronizationPlaylist.CreateListOfFilesToCopy(@"c:\temp\src", @"c:\temp\dst");
+            if (_synchronizationPlaylist == _synchronizationPlaylistSlow)
+            {
+                Debug.WriteLine("synchronization Slow");
+            }
+
+            if (_synchronizationPlaylist == _synchronizationPlaylistFast)
+            {
+                Debug.WriteLine("synchronization Fast");
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+            var filesToCopy = await _synchronizationPlaylist.CreateListOfFilesToCopy(@"h:\temp\src", @"c:\temp\dst");
             stopwatch.Stop();
-            Debug.WriteLine($"Hash ElapsedMilliseconds: {stopwatch.ElapsedMilliseconds}");
+            var elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+            Debug.WriteLine($"Hash ElapsedMilliseconds: {elapsedMilliseconds}");
+            LogMessage += Environment.NewLine + $"Hash ElapsedMilliseconds: {elapsedMilliseconds}";
 
             SumOfAllFileSize = _synchronizationPlaylist.GetSumOfAllFileSize(filesToCopy);
             Debug.WriteLine($"SumOfAllFileSize: {SumOfAllFileSize}");
 
-            Stopwatch stopwatchCopy = Stopwatch.StartNew();
+            var stopwatchCopy = Stopwatch.StartNew();
             await _synchronizationPlaylist.Copy(filesToCopy, progress);
             stopwatchCopy.Stop();
-            Debug.WriteLine($"Copy ElapsedMilliseconds: {stopwatchCopy.ElapsedMilliseconds}");
+            var copyElapsedMilliseconds = stopwatchCopy.ElapsedMilliseconds;
+            Debug.WriteLine($"Copy ElapsedMilliseconds: {copyElapsedMilliseconds}");
+            LogMessage += Environment.NewLine + $"Copy ElapsedMilliseconds: {copyElapsedMilliseconds}";
 
             CanCopy = true;
+
         }
     }
 }
