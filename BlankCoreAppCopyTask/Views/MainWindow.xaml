@@ -10,15 +10,24 @@
     <Grid>
         <!-- <ContentControl prism:RegionManager.RegionName="ContentRegion" /> -->
         <StackPanel Orientation="Vertical" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding SelectSrcFolderCommand}" Content="Select src folder" Margin="5"/>
-                <Button Command="{Binding SelectDstFolderCommand}" Content="Select dst folder" Margin="5" />
+            <StackPanel 
+                Orientation="Horizontal"
+                Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Button Command="{Binding SelectSrcFolderCommand}" Content="Select source" Margin="5"/>
+                <TextBlock Text="{Binding SourceFolderPath}"/>
             </StackPanel>
+            <StackPanel 
+                Orientation="Horizontal"
+                Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Button Command="{Binding SelectDstFolderCommand}" Content="Select destination" Margin="5" />
+                <TextBlock Text="{Binding DestinationFolderPath}"/>
+            </StackPanel>
+            
             <Button Content="Clear dest folder" 
-                    IsEnabled="{Binding CanCopy}" 
-                    Command="{Binding ClearCommand}" 
-                    Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                    Margin="15"/>
+                IsEnabled="{Binding CanCopy}" 
+                Command="{Binding ClearCommand}" 
+                Visibility="{Binding CanCopy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Margin="15"/>
 
             <RadioButton 
                 GroupName="ready" 

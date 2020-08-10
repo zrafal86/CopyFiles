@@ -21,13 +21,27 @@ namespace BlankCoreAppCopyTask.ViewModels
         private bool _canCopy = true;
         private ISynchronization _synchronization;
         private string _logMessage;
-        private string sourceFolder = @"c:\temp\src";
-        private string destinationFolder = @"c:\temp\dst";
 
         public string Title
         {
             get => _title;
             set => SetProperty(ref _title, value);
+        }
+
+        private string _destinationFolderPath;
+
+        public string DestinationFolderPath
+        {
+            get => _destinationFolderPath;
+            set => SetProperty(ref _destinationFolderPath, value);
+        }
+
+        private string _sourceFolderPath;
+
+        public string SourceFolderPath
+        {
+            get => _sourceFolderPath;
+            set => SetProperty(ref _sourceFolderPath, value);
         }
 
         public long SumOfAllFileSize
@@ -76,7 +90,7 @@ namespace BlankCoreAppCopyTask.ViewModels
             {
                 var dictianary = dialog.SelectedPath;
                 Debug.WriteLine($"result sourceFolder: {dictianary}");
-                sourceFolder = dictianary;
+                SourceFolderPath = dictianary;
             }
         }
 
@@ -88,7 +102,7 @@ namespace BlankCoreAppCopyTask.ViewModels
             {
                 var dictianary = dialog.SelectedPath;
                 Debug.WriteLine($"result destinationFolder: {dictianary}");
-                destinationFolder = dictianary;
+                DestinationFolderPath = dictianary;
             }
         }
 
@@ -116,7 +130,7 @@ namespace BlankCoreAppCopyTask.ViewModels
 
         private void ClearExecuteAction()
         {
-            RemoveAllFilesFrom(destinationFolder);
+            RemoveAllFilesFrom(DestinationFolderPath);
         }
 
         private void RemoveAllFilesFrom(string path)
@@ -164,7 +178,7 @@ namespace BlankCoreAppCopyTask.ViewModels
             }
 
             var stopwatch = Stopwatch.StartNew();
-            var filesToCopy = await _synchronization.CreateListOfFilesToCopy(sourceFolder, destinationFolder);
+            var filesToCopy = await _synchronization.CreateListOfFilesToCopy(SourceFolderPath, DestinationFolderPath);
             stopwatch.Stop();
             var elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
             Debug.WriteLine($"Hash ElapsedMilliseconds: {elapsedMilliseconds}");
