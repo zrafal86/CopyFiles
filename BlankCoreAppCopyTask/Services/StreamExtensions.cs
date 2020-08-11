@@ -7,8 +7,8 @@ namespace BlankCoreAppCopyTask.Services
 {
     public static class StreamExtensions
     {
-
-        internal static async Task CopyToAsync(this Stream fromStream, Stream destination, int bufferSize, Action<long> progressUpdate, CancellationToken cancellationToken)
+        internal static async Task CopyToAsync(this Stream fromStream, Stream destination, int bufferSize,
+            Action<long> progressUpdate, CancellationToken cancellationToken)
         {
             var buffer = new byte[bufferSize];
             int count;

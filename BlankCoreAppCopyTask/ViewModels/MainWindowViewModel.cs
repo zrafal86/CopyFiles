@@ -1,13 +1,12 @@
-﻿using BlankCoreAppCopyTask.Services;
-using Prism.Commands;
-using Prism.Mvvm;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using BlankCoreAppCopyTask.Services;
+using Prism.Commands;
+using Prism.Mvvm;
 using Unity;
 
 namespace BlankCoreAppCopyTask.ViewModels
@@ -16,18 +15,32 @@ namespace BlankCoreAppCopyTask.ViewModels
     {
         private readonly ISynchronization _synchronizationMultiThread;
         private readonly ISynchronization _synchronizationOneThread;
-        private ISynchronization _synchronization;
-        private string _title = "Comparison of copy method";
-        private long _sumOfAllFileSize;
-        private double _progressValue;
         private bool _canCopy = true;
-        private string _sourceFolderPath;
-        private long _hashMultiThreadTime;
         private long _copyMultiThreadTime;
-        private long _hashOneThreadTime;
         private long _copyOneThreadTime;
         private string _destinationFolderPath;
+        private long _hashMultiThreadTime;
+        private long _hashOneThreadTime;
+        private double _progressValue;
         private string _resultText;
+        private string _sourceFolderPath;
+        private long _sumOfAllFileSize;
+        private ISynchronization _synchronization;
+        private string _title = "Comparison of copy method";
+
+        public MainWindowViewModel(
+            [Dependency("VerMultiThread")] ISynchronization synchronizationMultiThread,
+            [Dependency("VerOneThread")] ISynchronization synchronizationOneThread)
+        {
+            _synchronizationMultiThread = synchronizationMultiThread;
+            _synchronizationOneThread = synchronizationOneThread;
+            _synchronization = _synchronizationOneThread;
+            SelectSrcFolderCommand = new DelegateCommand(SelectSrcFolderAction);
+            SelectDstFolderCommand = new DelegateCommand(SelectDstFolderAction);
+            ClearCommand = new DelegateCommand(ClearExecuteAction);
+            ChangeMethodCommand = new DelegateCommand<string>(ChangeMethodExecuteAction);
+            CopyCommand = new DelegateCommand(CopyExecuteAction, CanCopyExecute);
+        }
 
         public string Title
         {
@@ -95,18 +108,10 @@ namespace BlankCoreAppCopyTask.ViewModels
         public DelegateCommand<string> ChangeMethodCommand { get; }
         public DelegateCommand CopyCommand { get; }
 
-        public MainWindowViewModel(
-            [Dependency("VerMultiThread")] ISynchronization synchronizationMultiThread,
-            [Dependency("VerOneThread")] ISynchronization synchronizationOneThread)
+        public bool CanCopy
         {
-            _synchronizationMultiThread = synchronizationMultiThread;
-            _synchronizationOneThread = synchronizationOneThread;
-            _synchronization = _synchronizationOneThread;
-            SelectSrcFolderCommand = new DelegateCommand(SelectSrcFolderAction);
-            SelectDstFolderCommand = new DelegateCommand(SelectDstFolderAction);
-            ClearCommand = new DelegateCommand(ClearExecuteAction);
-            ChangeMethodCommand = new DelegateCommand<string>(ChangeMethodExecuteAction);
-            CopyCommand = new DelegateCommand(CopyExecuteAction, CanCopyExecute);
+            get => _canCopy;
+            set => SetProperty(ref _canCopy, value);
         }
 
         private void SelectSrcFolderAction()
@@ -146,45 +151,28 @@ namespace BlankCoreAppCopyTask.ViewModels
             return CanCopy;
         }
 
-        public bool CanCopy
-        {
-            get => _canCopy;
-            set => SetProperty(ref _canCopy, value);
-        }
-
         private void ClearExecuteAction()
         {
-            if (!string.IsNullOrEmpty(DestinationFolderPath))
-            {
-                RemoveAllFilesFrom(DestinationFolderPath);
-            }
+            if (!string.IsNullOrEmpty(DestinationFolderPath)) RemoveAllFilesFrom(DestinationFolderPath);
         }
 
         private void RemoveAllFilesFrom(string path)
         {
             var di = new DirectoryInfo(path);
 
-            foreach (var file in di.GetFiles())
-            {
-                file.Delete();
-            }
-            foreach (var dir in di.GetDirectories())
-            {
-                dir.Delete(true);
-            }
+            foreach (var file in di.GetFiles()) file.Delete();
+            foreach (var dir in di.GetDirectories()) dir.Delete(true);
         }
 
         private void CopyExecuteAction()
         {
             var progressUpdater = new Action<double>(progress =>
             {
-                Dispatcher.CurrentDispatcher.Invoke(() =>
-                {
-                    ProgressValue = progress;
-                });
+                Dispatcher.CurrentDispatcher.Invoke(() => { ProgressValue = progress; });
             });
             var task = CopyExecuteActionAsync(progressUpdater);
-            task.ContinueWith(delegate { Debug.WriteLine("Copy finished"); }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            task.ContinueWith(delegate { Debug.WriteLine("Copy finished"); },
+                TaskContinuationOptions.OnlyOnRanToCompletion);
             task.ContinueWith(delegate
             {
                 Debug.WriteLine("error copy");
@@ -227,20 +215,20 @@ namespace BlankCoreAppCopyTask.ViewModels
                 CopyMultiThreadTime = copyElapsedMilliseconds;
             }
 
-            if (HashOneThreadTime > 0 && 
-                CopyOneThreadTime > 0 && 
-                HashMultiThreadTime > 0 && 
+            if (HashOneThreadTime > 0 &&
+                CopyOneThreadTime > 0 &&
+                HashMultiThreadTime > 0 &&
                 CopyMultiThreadTime > 0)
             {
-                var increaseHashCalculation = (double)(HashOneThreadTime - HashMultiThreadTime) / HashOneThreadTime * 100.0;
-                var increaseCopy = (double)(CopyOneThreadTime - CopyMultiThreadTime) / CopyOneThreadTime * 100.0;
-                ResultText = $"Multi thread hash calculation is faster/slower {increaseHashCalculation}% then one thread method\n" +
-                             $"Multi thread copy is faster/slower {increaseCopy}% then one thread method";
+                var increaseHashCalculation =
+                    (double) (HashOneThreadTime - HashMultiThreadTime) / HashOneThreadTime * 100.0;
+                var increaseCopy = (double) (CopyOneThreadTime - CopyMultiThreadTime) / CopyOneThreadTime * 100.0;
+                ResultText =
+                    $"Multi thread hash calculation is faster/slower {increaseHashCalculation}% then one thread method\n" +
+                    $"Multi thread copy is faster/slower {increaseCopy}% then one thread method";
             }
 
             CanCopy = true;
-
         }
-
     }
 }

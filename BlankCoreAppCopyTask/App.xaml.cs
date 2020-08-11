@@ -1,12 +1,12 @@
-﻿using BlankCoreAppCopyTask.Services;
+﻿using System.Windows;
+using BlankCoreAppCopyTask.Services;
 using BlankCoreAppCopyTask.Views;
 using Prism.Ioc;
-using System.Windows;
 
 namespace BlankCoreAppCopyTask
 {
     /// <summary>
-    /// Interaction logic for App.xaml
+    ///     Interaction logic for App.xaml
     /// </summary>
     public partial class App
     {

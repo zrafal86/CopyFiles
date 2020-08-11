@@ -28,30 +28,14 @@ namespace BlankCoreAppCopyTask.Services
             var action = new Action<long>(bytesTransferred =>
             {
                 Interlocked.Add(ref copyProgressInfo, bytesTransferred);
-                Dispatcher.CurrentDispatcher.Invoke(() =>
-                {
-                    updater?.Invoke((double)copyProgressInfo / sum);
-                });
+                Dispatcher.CurrentDispatcher.Invoke(() => { updater?.Invoke((double) copyProgressInfo / sum); });
             });
             var copyOperation = Task.Run(async () =>
             {
-                foreach (var file in files)
-                {
-                    await Copy(file, action);
-                }
+                foreach (var file in files) await Copy(file, action);
             });
 
             await copyOperation;
-        }
-
-        private async Task Copy(IFileToCopy file, Action<long> progressUpdate)
-        {
-            await using var sourceStream = File.Open(file.Path, FileMode.Open);
-            if (!File.Exists(file.Destination))
-            {
-                await using var destinationStream = File.Create(file.Destination);
-                await sourceStream.CopyToAsync(destinationStream, 16384, progressUpdate, CancellationToken.None);
-            }
         }
 
         public async Task<ImmutableArray<IFileToCopy>> CreateListOfFilesToCopy(string src, string dst)
@@ -68,7 +52,8 @@ namespace BlankCoreAppCopyTask.Services
                     var hash = _hashCalculator.CalculateHash(file, MD5.Create());
                     Debug.WriteLine($"{Thread.CurrentThread.ManagedThreadId}\nfile: {file}: hash: {hash}");
                     var destination = Path.Combine(dst, $"{hash}{fi.Extension}");
-                    var isAlreadyAdded = filesToCopy.Any(fileToCopy => fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
+                    var isAlreadyAdded = filesToCopy.Any(fileToCopy =>
+                        fileToCopy.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
                     if (!File.Exists(destination) && !isAlreadyAdded)
                     {
                         var fileToCopy = new FileToCopy(hash, file, fi.Length, destination);
@@ -83,6 +68,16 @@ namespace BlankCoreAppCopyTask.Services
         public long GetSumOfAllFileSize(ImmutableArray<IFileToCopy> files)
         {
             return files.Sum(file => file.Size);
+        }
+
+        private async Task Copy(IFileToCopy file, Action<long> progressUpdate)
+        {
+            await using var sourceStream = File.Open(file.Path, FileMode.Open);
+            if (!File.Exists(file.Destination))
+            {
+                await using var destinationStream = File.Create(file.Destination);
+                await sourceStream.CopyToAsync(destinationStream, 16384, progressUpdate, CancellationToken.None);
+            }
         }
     }
 }
