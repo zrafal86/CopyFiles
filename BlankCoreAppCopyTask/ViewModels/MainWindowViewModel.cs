@@ -4,6 +4,7 @@ using Prism.Mvvm;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
@@ -15,12 +16,18 @@ namespace BlankCoreAppCopyTask.ViewModels
     {
         private readonly ISynchronization _synchronizationMultiThread;
         private readonly ISynchronization _synchronizationOneThread;
+        private ISynchronization _synchronization;
         private string _title = "Comparison of copy method";
         private long _sumOfAllFileSize;
         private double _progressValue;
         private bool _canCopy = true;
-        private ISynchronization _synchronization;
-        private string _logMessage;
+        private string _sourceFolderPath;
+        private long _hashMultiThreadTime;
+        private long _copyMultiThreadTime;
+        private long _hashOneThreadTime;
+        private long _copyOneThreadTime;
+        private string _destinationFolderPath;
+        private string _resultText;
 
         public string Title
         {
@@ -28,15 +35,11 @@ namespace BlankCoreAppCopyTask.ViewModels
             set => SetProperty(ref _title, value);
         }
 
-        private string _destinationFolderPath;
-
         public string DestinationFolderPath
         {
             get => _destinationFolderPath;
             set => SetProperty(ref _destinationFolderPath, value);
         }
-
-        private string _sourceFolderPath;
 
         public string SourceFolderPath
         {
@@ -56,10 +59,34 @@ namespace BlankCoreAppCopyTask.ViewModels
             set => SetProperty(ref _progressValue, value);
         }
 
-        public string LogMessage
+        public long HashMultiThreadTime
         {
-            get => _logMessage;
-            set => SetProperty(ref _logMessage, value);
+            get => _hashMultiThreadTime;
+            set => SetProperty(ref _hashMultiThreadTime, value);
+        }
+
+        public long CopyMultiThreadTime
+        {
+            get => _copyMultiThreadTime;
+            set => SetProperty(ref _copyMultiThreadTime, value);
+        }
+
+        public long HashOneThreadTime
+        {
+            get => _hashOneThreadTime;
+            set => SetProperty(ref _hashOneThreadTime, value);
+        }
+
+        public long CopyOneThreadTime
+        {
+            get => _copyOneThreadTime;
+            set => SetProperty(ref _copyOneThreadTime, value);
+        }
+
+        public string ResultText
+        {
+            get => _resultText;
+            set => SetProperty(ref _resultText, value);
         }
 
         public DelegateCommand SelectSrcFolderCommand { get; }
@@ -84,26 +111,23 @@ namespace BlankCoreAppCopyTask.ViewModels
 
         private void SelectSrcFolderAction()
         {
-            var dialog = new FolderBrowserDialog();
-            var result = dialog.ShowDialog();
-            if (result == DialogResult.OK) 
-            {
-                var dictianary = dialog.SelectedPath;
-                Debug.WriteLine($"result sourceFolder: {dictianary}");
-                SourceFolderPath = dictianary;
-            }
+            var dictionary = SelectedFolderPath();
+            Debug.WriteLine($"result sourceFolder: {dictionary}");
+            SourceFolderPath = dictionary;
         }
 
         private void SelectDstFolderAction()
         {
+            var dictionary = SelectedFolderPath();
+            Debug.WriteLine($"result destinationFolder: {dictionary}");
+            DestinationFolderPath = dictionary;
+        }
+
+        private string SelectedFolderPath()
+        {
             var dialog = new FolderBrowserDialog();
             var result = dialog.ShowDialog();
-            if (result == DialogResult.OK)
-            {
-                var dictianary = dialog.SelectedPath;
-                Debug.WriteLine($"result destinationFolder: {dictianary}");
-                DestinationFolderPath = dictianary;
-            }
+            return result == DialogResult.OK ? dialog.SelectedPath : string.Empty;
         }
 
         private void ChangeMethodExecuteAction(string method)
@@ -130,7 +154,10 @@ namespace BlankCoreAppCopyTask.ViewModels
 
         private void ClearExecuteAction()
         {
-            RemoveAllFilesFrom(DestinationFolderPath);
+            if (!string.IsNullOrEmpty(DestinationFolderPath))
+            {
+                RemoveAllFilesFrom(DestinationFolderPath);
+            }
         }
 
         private void RemoveAllFilesFrom(string path)
@@ -158,7 +185,11 @@ namespace BlankCoreAppCopyTask.ViewModels
             });
             var task = CopyExecuteActionAsync(progressUpdater);
             task.ContinueWith(delegate { Debug.WriteLine("Copy finished"); }, TaskContinuationOptions.OnlyOnRanToCompletion);
-            task.ContinueWith(delegate { Debug.WriteLine("error copy"); }, TaskContinuationOptions.OnlyOnFaulted);
+            task.ContinueWith(delegate
+            {
+                Debug.WriteLine("error copy");
+                CanCopy = true;
+            }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         private async Task CopyExecuteActionAsync(Action<double> progress)
@@ -167,22 +198,11 @@ namespace BlankCoreAppCopyTask.ViewModels
             ProgressValue = 0;
             CanCopy = false;
 
-            if (_synchronization == _synchronizationOneThread)
-            {
-                Debug.WriteLine("synchronization OneThread");
-            }
-
-            if (_synchronization == _synchronizationMultiThread)
-            {
-                Debug.WriteLine("synchronization MultiThread");
-            }
-
             var stopwatch = Stopwatch.StartNew();
             var filesToCopy = await _synchronization.CreateListOfFilesToCopy(SourceFolderPath, DestinationFolderPath);
             stopwatch.Stop();
-            var elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
-            Debug.WriteLine($"Hash ElapsedMilliseconds: {elapsedMilliseconds}");
-            LogMessage += Environment.NewLine + $"Hash ElapsedMilliseconds: {elapsedMilliseconds}";
+            var hashElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+            Debug.WriteLine($"Hash ElapsedMilliseconds: {hashElapsedMilliseconds}");
 
             SumOfAllFileSize = _synchronization.GetSumOfAllFileSize(filesToCopy);
             Debug.WriteLine($"SumOfAllFileSize: {SumOfAllFileSize}");
@@ -192,10 +212,35 @@ namespace BlankCoreAppCopyTask.ViewModels
             stopwatchCopy.Stop();
             var copyElapsedMilliseconds = stopwatchCopy.ElapsedMilliseconds;
             Debug.WriteLine($"Copy ElapsedMilliseconds: {copyElapsedMilliseconds}");
-            LogMessage += Environment.NewLine + $"Copy ElapsedMilliseconds: {copyElapsedMilliseconds}";
+
+            if (_synchronization == _synchronizationOneThread)
+            {
+                Debug.WriteLine("synchronization OneThread");
+                HashOneThreadTime = hashElapsedMilliseconds;
+                CopyOneThreadTime = copyElapsedMilliseconds;
+            }
+
+            if (_synchronization == _synchronizationMultiThread)
+            {
+                Debug.WriteLine("synchronization MultiThread");
+                HashMultiThreadTime = hashElapsedMilliseconds;
+                CopyMultiThreadTime = copyElapsedMilliseconds;
+            }
+
+            if (HashOneThreadTime > 0 && 
+                CopyOneThreadTime > 0 && 
+                HashMultiThreadTime > 0 && 
+                CopyMultiThreadTime > 0)
+            {
+                var increaseHashCalculation = (double)(HashOneThreadTime - HashMultiThreadTime) / HashOneThreadTime * 100.0;
+                var increaseCopy = (double)(CopyOneThreadTime - CopyMultiThreadTime) / CopyOneThreadTime * 100.0;
+                ResultText = $"Multi thread hash calculation is faster/slower {increaseHashCalculation}% then one thread method\n" +
+                             $"Multi thread copy is faster/slower {increaseCopy}% then one thread method";
+            }
 
             CanCopy = true;
 
         }
+
     }
 }

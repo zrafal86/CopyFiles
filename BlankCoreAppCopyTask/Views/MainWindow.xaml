@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:prism="http://prismlibrary.com/"
         prism:ViewModelLocator.AutoWireViewModel="True"
-        Title="{Binding Title}" Height="350" Width="525" >
+        Title="{Binding Title}" Height="450" Width="625" >
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
@@ -64,7 +64,26 @@
                 Minimum="0"
                 Maximum="1"/>
 
-            <TextBlock Text="{Binding LogMessage}"/>
+            <StackPanel Orientation="Horizontal">
+                <Label>HashOneThreadTime</Label>
+                <TextBlock Text="{Binding HashOneThreadTime}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label>CopyOneThreadTime</Label>
+                <TextBlock Text="{Binding CopyOneThreadTime}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label>HashMultiThreadTime</Label>
+                <TextBlock Text="{Binding HashMultiThreadTime}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label>CopyMultiThreadTime</Label>
+                <TextBlock Text="{Binding CopyMultiThreadTime}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label>Result</Label>
+                <TextBlock Text="{Binding ResultText}"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Window>
