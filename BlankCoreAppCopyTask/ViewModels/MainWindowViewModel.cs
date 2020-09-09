@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
@@ -27,6 +28,7 @@ namespace BlankCoreAppCopyTask.ViewModels
         private long _sumOfAllFileSize;
         private ISynchronization _synchronization;
         private string _title = "Comparison of copy method";
+        private CancellationTokenSource _syncCancellationTokenSource;
 
         public MainWindowViewModel(
             [Dependency("VerMultiThread")] ISynchronization synchronizationMultiThread,
@@ -195,8 +197,17 @@ namespace BlankCoreAppCopyTask.ViewModels
             SumOfAllFileSize = _synchronization.GetSumOfAllFileSize(filesToCopy);
             Debug.WriteLine($"SumOfAllFileSize: {SumOfAllFileSize}");
 
+            if (_syncCancellationTokenSource != null)
+            {
+                _syncCancellationTokenSource.Cancel();
+                _syncCancellationTokenSource.Dispose();
+            }
+
+            _syncCancellationTokenSource = new CancellationTokenSource();
+            var token = _syncCancellationTokenSource.Token;
+
             var stopwatchCopy = Stopwatch.StartNew();
-            await _synchronization.Copy(filesToCopy, progress);
+            await _synchronization.Copy(filesToCopy, progress, token);
             stopwatchCopy.Stop();
             var copyElapsedMilliseconds = stopwatchCopy.ElapsedMilliseconds;
             Debug.WriteLine($"Copy ElapsedMilliseconds: {copyElapsedMilliseconds}");

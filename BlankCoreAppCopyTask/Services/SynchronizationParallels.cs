@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -20,7 +21,7 @@ namespace BlankCoreAppCopyTask.Services
             _hashCalculator = hashCalculator;
         }
 
-        public async Task Copy(ImmutableArray<IFileToCopy> files, Action<double> updater)
+        public async Task<Result<IFileToCopy>[]> Copy(ImmutableArray<IFileToCopy> files, Action<double> updater, CancellationToken sourceToken)
         {
             var sum = GetSumOfAllFileSize(files);
 
@@ -31,9 +32,13 @@ namespace BlankCoreAppCopyTask.Services
                 Dispatcher.CurrentDispatcher.Invoke(() => { updater?.Invoke((double) copyProgressInfo / sum); });
             });
             var copyOperation =
-                Task.Run(() => { Parallel.ForEach(files, async file => { await Copy(file, action); }); });
+                Task.Run(() =>
+                {
+                    var result = Parallel.ForEach(files, async file => { await Copy(file, action, sourceToken); });
+                }, sourceToken);
 
             await copyOperation;
+            return new Result<IFileToCopy>[] { };
         }
 
         public async Task<ImmutableArray<IFileToCopy>> CreateListOfFilesToCopy(string src, string dst)
@@ -69,13 +74,36 @@ namespace BlankCoreAppCopyTask.Services
             return files.Sum(file => file.Size);
         }
 
-        private async Task Copy(IFileToCopy file, Action<long> progressUpdate)
+        private static async Task<Result<IFileToCopy>> Copy(IFileToCopy file, Action<long> progressUpdate,
+            CancellationToken sourceToken = default)
         {
-            await using var sourceStream = File.Open(file.Path, FileMode.Open);
-            if (!File.Exists(file.Destination))
+            try
             {
-                await using var destinationStream = File.Create(file.Destination);
-                await sourceStream.CopyToAsync(destinationStream, 16384, progressUpdate, CancellationToken.None);
+                if (sourceToken.IsCancellationRequested)
+                {
+                    sourceToken.ThrowIfCancellationRequested();
+                }
+
+                await using (var sourceStream = File.Open(file.Path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    if (!File.Exists(file.Destination) && sourceStream != null)
+                    {
+                        await using var destinationStream = File.Create(file.Destination);
+                        await sourceStream.CopyToAsync(destinationStream, ISynchronization.BUFFER_SIZE, progressUpdate, sourceToken);
+                    }
+                }
+
+                return new Result<IFileToCopy>(file, null);
+            }
+            catch (FileNotFoundException e)
+            {
+                Debug.WriteLine(e);
+                return new Result<IFileToCopy>(file, new Error($"file not found: {e.Message}"));
+            }
+            catch (IOException e)
+            {
+                Debug.WriteLine(e);
+                return new Result<IFileToCopy>(file, new Error($"io error: {e.Message}"));
             }
         }
     }

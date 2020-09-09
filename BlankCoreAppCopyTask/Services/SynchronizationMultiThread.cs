@@ -20,7 +20,8 @@ namespace BlankCoreAppCopyTask.Services
             _hashCalculator = hashCalculator;
         }
 
-        public async Task Copy(ImmutableArray<IFileToCopy> files, Action<double> updater)
+        public async Task<Result<IFileToCopy>[]> Copy(ImmutableArray<IFileToCopy> files, Action<double> updater,
+            CancellationToken sourceToken)
         {
             var sum = GetSumOfAllFileSize(files);
 
@@ -30,14 +31,12 @@ namespace BlankCoreAppCopyTask.Services
                 Interlocked.Add(ref copyProgressInfo, bytesTransferred);
                 Dispatcher.CurrentDispatcher.Invoke(() => { updater?.Invoke((double) copyProgressInfo / sum); });
             });
-            var copyOperation = Task.Factory.StartNew(() =>
-            {
-                foreach (var file in files)
-                    Task.Factory.StartNew(async () => { await Copy(file, action); },
-                        TaskCreationOptions.AttachedToParent).Unwrap();
-            });
 
-            await copyOperation;
+            var tasks = files.Select(file => Task.Factory.StartNew(
+                async () => await Copy(file, action, sourceToken),
+                sourceToken).Unwrap()).ToList();
+
+            return await Task.WhenAll(tasks);
         }
 
         public async Task<ImmutableArray<IFileToCopy>> CreateListOfFilesToCopy(string src, string dst)
@@ -73,13 +72,36 @@ namespace BlankCoreAppCopyTask.Services
             return files.Sum(file => file.Size);
         }
 
-        private async Task Copy(IFileToCopy file, Action<long> progressUpdate)
+        private static async Task<Result<IFileToCopy>> Copy(IFileToCopy file, Action<long> progressUpdate,
+            CancellationToken sourceToken = default)
         {
-            await using var sourceStream = File.Open(file.Path, FileMode.Open);
-            if (!File.Exists(file.Destination))
+            try
             {
-                await using var destinationStream = File.Create(file.Destination);
-                await sourceStream.CopyToAsync(destinationStream, 16384, progressUpdate, CancellationToken.None);
+                if (sourceToken.IsCancellationRequested)
+                {
+                    sourceToken.ThrowIfCancellationRequested();
+                }
+
+                await using (var sourceStream = File.Open(file.Path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    if (!File.Exists(file.Destination) && sourceStream != null)
+                    {
+                        await using var destinationStream = File.Create(file.Destination);
+                        await sourceStream.CopyToAsync(destinationStream, ISynchronization.BUFFER_SIZE, progressUpdate, sourceToken);
+                    }
+                }
+
+                return new Result<IFileToCopy>(file, null);
+            }
+            catch (FileNotFoundException e)
+            {
+                Debug.WriteLine(e);
+                return new Result<IFileToCopy>(file, new Error($"file not found: {e.Message}"));
+            }
+            catch (IOException e)
+            {
+                Debug.WriteLine(e);
+                return new Result<IFileToCopy>(file, new Error($"io error: {e.Message}"));
             }
         }
     }
