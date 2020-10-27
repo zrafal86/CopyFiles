@@ -13,7 +13,7 @@ namespace BlankCoreAppCopyTask.Services
     {
         public string CalculateHash(string filePath, HashAlgorithm algorithm)
         {
-            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var bytes = algorithm.ComputeHash(stream);
 
             var builder = new StringBuilder();
