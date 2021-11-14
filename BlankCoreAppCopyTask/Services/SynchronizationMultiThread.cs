@@ -48,6 +48,7 @@ namespace BlankCoreAppCopyTask.Services
             await Task.Factory.StartNew(() =>
             {
                 foreach (var file in Directory.GetFiles(src))
+                {
                     Task.Factory.StartNew(() =>
                     {
                         var fi = new FileInfo(file);
@@ -62,6 +63,7 @@ namespace BlankCoreAppCopyTask.Services
                             filesToCopy.Add(fileToCopy);
                         }
                     }, TaskCreationOptions.AttachedToParent);
+                }
             });
 
             return filesToCopy.ToImmutableArray();
