@@ -19,16 +19,16 @@ namespace BlankCoreAppCopyTask.ViewModels
         private bool _canCopy = true;
         private long _copyMultiThreadTime;
         private long _copyOneThreadTime;
-        private string _destinationFolderPath;
+        private string? _destinationFolderPath;
         private long _hashMultiThreadTime;
         private long _hashOneThreadTime;
         private double _progressValue;
-        private string _resultText;
-        private string _sourceFolderPath;
+        private string? _resultText;
+        private string? _sourceFolderPath;
         private long _sumOfAllFileSize;
         private ISynchronization _synchronization;
         private string _title = "Comparison of copy method";
-        private CancellationTokenSource _syncCancellationTokenSource;
+        private CancellationTokenSource? _syncCancellationTokenSource;
 
         public MainWindowViewModel(
             [Dependency("VerMultiThread")] ISynchronization synchronizationMultiThread,
@@ -50,13 +50,13 @@ namespace BlankCoreAppCopyTask.ViewModels
             set => SetProperty(ref _title, value);
         }
 
-        public string DestinationFolderPath
+        public string? DestinationFolderPath
         {
             get => _destinationFolderPath;
             set => SetProperty(ref _destinationFolderPath, value);
         }
 
-        public string SourceFolderPath
+        public string? SourceFolderPath
         {
             get => _sourceFolderPath;
             set => SetProperty(ref _sourceFolderPath, value);
@@ -98,7 +98,7 @@ namespace BlankCoreAppCopyTask.ViewModels
             set => SetProperty(ref _copyOneThreadTime, value);
         }
 
-        public string ResultText
+        public string? ResultText
         {
             get => _resultText;
             set => SetProperty(ref _resultText, value);
@@ -184,7 +184,8 @@ namespace BlankCoreAppCopyTask.ViewModels
 
         private async Task CopyExecuteActionAsync(Action<double> progress)
         {
-            // FileSystem.CopyDirectory(@"c:\temp\src", @"c:\temp\dst", UIOption.AllDialogs);
+            if (SourceFolderPath is null || DestinationFolderPath is null) return;
+
             ProgressValue = 0;
             CanCopy = false;
 
