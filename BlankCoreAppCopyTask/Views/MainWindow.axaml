@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:BlankCoreAppCopyTask.ViewModels"
         x:Class="BlankCoreAppCopyTask.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
         Height="450"
         Width="625">
