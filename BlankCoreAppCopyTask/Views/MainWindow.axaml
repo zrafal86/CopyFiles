@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BlankCoreAppCopyTask.Views.MainWindow"
+        Title="{Binding Title}"
+        Height="450"
+        Width="625">
+    <Grid>
+        <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" IsVisible="{Binding CanCopy}">
+                <Button Command="{Binding SelectSrcFolderCommand}" Content="Select source" Margin="5" />
+                <TextBlock Text="{Binding SourceFolderPath}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" IsVisible="{Binding CanCopy}">
+                <Button Command="{Binding SelectDstFolderCommand}" Content="Select destination" Margin="5" />
+                <TextBlock Text="{Binding DestinationFolderPath}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <Button Content="Clear dest folder"
+                    IsEnabled="{Binding CanCopy}"
+                    Command="{Binding ClearCommand}"
+                    IsVisible="{Binding CanCopy}"
+                    Margin="15" />
+
+            <RadioButton GroupName="method"
+                         IsChecked="True"
+                         Command="{Binding ChangeMethodCommand}"
+                         CommandParameter="OneThread"
+                         IsEnabled="{Binding CanCopy}"
+                         IsVisible="{Binding CanCopy}">OneThread</RadioButton>
+            <RadioButton GroupName="method"
+                         Command="{Binding ChangeMethodCommand}"
+                         CommandParameter="MultiThread"
+                         IsEnabled="{Binding CanCopy}"
+                         IsVisible="{Binding CanCopy}">MultiThread</RadioButton>
+
+            <Button Content="Copy"
+                    Command="{Binding CopyCommand}"
+                    IsEnabled="{Binding CanCopy}"
+                    IsVisible="{Binding CanCopy}"
+                    Margin="15" />
+
+            <ProgressBar HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Height="10"
+                         Width="500"
+                         Value="{Binding ProgressValue}"
+                         IsIndeterminate="False"
+                         Minimum="0"
+                         Maximum="1" />
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="HashOneThreadTime: " />
+                <TextBlock Text="{Binding HashOneThreadTime}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="CopyOneThreadTime: " />
+                <TextBlock Text="{Binding CopyOneThreadTime}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="HashMultiThreadTime: " />
+                <TextBlock Text="{Binding HashMultiThreadTime}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="CopyMultiThreadTime: " />
+                <TextBlock Text="{Binding CopyMultiThreadTime}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Result: " />
+                <TextBlock Text="{Binding ResultText}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

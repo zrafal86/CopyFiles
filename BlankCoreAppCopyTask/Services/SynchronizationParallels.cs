@@ -8,7 +8,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 
 namespace BlankCoreAppCopyTask.Services
 {
@@ -29,7 +28,7 @@ namespace BlankCoreAppCopyTask.Services
             var action = new Action<long>(bytesTransferred =>
             {
                 Interlocked.Add(ref copyProgressInfo, bytesTransferred);
-                Dispatcher.CurrentDispatcher.Invoke(() => { updater?.Invoke((double) copyProgressInfo / sum); });
+                updater?.Invoke((double)copyProgressInfo / sum);
             });
             var copyOperation =
                 Task.Run(() =>
